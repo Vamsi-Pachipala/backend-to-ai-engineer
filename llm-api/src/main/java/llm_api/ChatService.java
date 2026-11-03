@@ -1,6 +1,7 @@
 package llm_api;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import llm_api.DTO.EmbeddingResponse;
+import tools.jackson.databind.json.JsonMapper;
 import llm_api.DTO.OpenAIResponse;
 import llm_api.DTO.ResumeResponse;
 import org.springframework.beans.factory.annotation.Value;
@@ -8,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 @Service
 public class ChatService {
@@ -15,19 +17,19 @@ public class ChatService {
     private final RestClient restClient;
     private final String apiKey;
 
-    public ChatService(@Value("${openai.api-key}") String apiKey) {
+    public ChatService(@Value("${groq.api-key}") String apiKey) {
 
         this.apiKey = apiKey;
 
         this.restClient = RestClient.builder()
-                .baseUrl("https://api.openai.com")
+                .baseUrl("https://api.groq.com/openai")
                 .build();
     }
 
     public String chat(String message) {
 
         Map<String, Object> requestBody = Map.of(
-                "model", "gpt-6-luna",
+                "model", "openai/gpt-oss-120b",
                 "input", message
         );
 
@@ -68,13 +70,13 @@ public class ChatService {
                 .orElse("No response from OpenAI.");
     }
 
-    public ResumeResponse analyzeResume(String resume) {
+    public String analyzeResume(String resume) {
 
         String prompt = buildResumePrompt(resume);
 
         Map<String, Object> requestBody = new HashMap<>();
 
-        requestBody.put("model", "gpt-6-luna");
+        requestBody.put("model", "openai/gpt-oss-120b");
         requestBody.put("input", prompt);
 
         OpenAIResponse openAIResponse = restClient.post()
@@ -91,12 +93,7 @@ public class ChatService {
                 .findFirst()
                 .orElse("{}");
 
-        try {
-            ObjectMapper objectMapper = new ObjectMapper();
-            return objectMapper.readValue(json, ResumeResponse.class);
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to parse OpenAI response", e);
-        }
+        return json;
     }
 
     private String buildResumePrompt(String resume) {
@@ -132,5 +129,22 @@ public class ChatService {
               "summary": ""
             }
             """.formatted(resume);
+    }
+
+    public String createEmbedding(String text) {
+
+        Map<String, Object> requestBody = new HashMap<>();
+
+        requestBody.put("model", "text-embedding-3-small");
+        requestBody.put("input", text);
+
+        String response = restClient.post()
+                .uri("/v1/embeddings")
+                .header("Authorization", "Bearer " + apiKey)
+                .body(requestBody)
+                .retrieve()
+                .body(String.class);
+
+        return response;
     }
 }

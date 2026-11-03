@@ -5,3 +5,6 @@ spring:
 openai:
   api-key: ${OPENAI_API_KEY}
 
+groq:
+  api-key: ${GROQ_API_KEY}
+
