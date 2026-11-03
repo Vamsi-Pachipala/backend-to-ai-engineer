@@ -31,12 +31,34 @@ public class ChatService {
                 "input", message
         );
 
+        long start = System.currentTimeMillis();
+
         OpenAIResponse openAIResponse =  restClient.post()
                 .uri("/v1/responses")
                 .header("Authorization", "Bearer " + apiKey)
                 .body(requestBody)
                 .retrieve()
                 .body(OpenAIResponse.class);
+
+        long end = System.currentTimeMillis();
+        System.out.println("OpenAI API call duration: " + (end - start) + " ms");
+
+        int inputTokens = openAIResponse.getUsage().getInputTokens();
+        int outputTokens = openAIResponse.getUsage().getOutputTokens();
+        int totalTokens = openAIResponse.getUsage().getTotalTokens();
+
+        System.out.println("Input tokens : " + inputTokens);
+        System.out.println("Output tokens: " + outputTokens);
+        System.out.println("Total tokens : " + totalTokens);
+
+        double inputCost = (inputTokens / 1_000_000.0) * 0.10;
+        double outputCost = (outputTokens / 1_000_000.0) * 0.50;
+
+        double totalCost = inputCost + outputCost;
+
+        System.out.println("Input cost   : $" + inputCost);
+        System.out.println("Output cost  : $" + outputCost);
+        System.out.println("Total cost   : $" + totalCost);
 
         return openAIResponse.getOutput().stream()
                 .flatMap(outputItem -> outputItem.getContent().stream())
