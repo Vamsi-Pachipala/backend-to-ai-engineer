@@ -9,7 +9,11 @@ import io.qdrant.client.grpc.JsonWithInt.Value;
 import static io.qdrant.client.PointIdFactory.id;
 import static io.qdrant.client.ValueFactory.value;
 import static io.qdrant.client.VectorsFactory.vectors;
+import io.qdrant.client.grpc.Points.QueryPoints;
+import io.qdrant.client.grpc.Points.ScoredPoint;
 
+import static io.qdrant.client.QueryFactory.nearest;
+import static io.qdrant.client.WithPayloadSelectorFactory.enable;
 import java.util.*;
 
 @Service
@@ -79,6 +83,45 @@ public class QdrantService {
         ).get();
 
         System.out.println("Document inserted: " + text);
+    }
+
+    public String search(String query, int topK)
+            throws Exception {
+
+        // 1. Generate embedding for user query
+        float[] queryEmbedding =
+                embeddingService.createEmbedding(query);
+
+        // 2. Search in Qdrant
+        List<ScoredPoint> results =
+                qdrantClient.queryAsync(
+                        QueryPoints.newBuilder()
+                                .setCollectionName("documents")
+                                .setQuery(nearest(queryEmbedding))
+                                .setLimit(topK)
+                                .setWithPayload(enable(true))
+                                .build()
+                ).get();
+
+
+        System.out.println("Qdrant search results for query: " + query);
+
+        StringBuilder result = new StringBuilder();
+        for (ScoredPoint point : results) {
+            String text = point.getPayloadOrThrow("text").getStringValue();
+            String role = point.getPayloadOrThrow("role").getStringValue();
+            String location = point.getPayloadOrThrow("location").getStringValue();
+            float score = point.getScore();
+
+            result.append("Text: ")
+                    .append(text)
+                    .append(", Role: ")
+                    .append(role).append(", Location: ")
+                    .append(location).append(", Score: ")
+                    .append(score).append("\n");
+        }
+
+        return result.toString();
     }
 
 

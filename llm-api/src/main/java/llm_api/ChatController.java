@@ -2,6 +2,8 @@ package llm_api;
 
 import ai.djl.ModelException;
 import ai.djl.translate.TranslateException;
+import io.qdrant.client.grpc.Points;
+
 import llm_api.DTO.ChatRequest;
 import llm_api.DTO.ResumeRequest;
 import llm_api.DTO.ResumeResponse;
@@ -23,10 +25,13 @@ public class ChatController {
 
     private final SemanticSearchService semanticSearchService;
 
-    public ChatController(ChatService chatService , EmbeddingService embeddingService , SemanticSearchService semanticSearchService) {
+    private final QdrantService qdrantService;
+
+    public ChatController(ChatService chatService , EmbeddingService embeddingService , SemanticSearchService semanticSearchService, QdrantService qdrantService) {
         this.chatService = chatService;
         this.embeddingService = embeddingService;
         this.semanticSearchService = semanticSearchService;
+        this.qdrantService = qdrantService;
     }
 
     @PostMapping("/chat")
@@ -63,4 +68,14 @@ public class ChatController {
     public List<SearchResult> semanticSearchTopK(@RequestBody ResumeRequest request) throws TranslateException {
         return semanticSearchService.searchTopK(request.getResumeText(), 3);
     }
+
+    @PostMapping("/qdrant/search-top-k")
+    public String qdrantSearchTopK(@RequestBody ResumeRequest request) throws TranslateException {
+        try {
+            return qdrantService.search(request.getResumeText(), 3);
+        }catch (Exception e) {
+            throw new RuntimeException("Error during Qdrant search", e);
+        }
+    }
+
 }
